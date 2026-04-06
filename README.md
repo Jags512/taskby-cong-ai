@@ -1,77 +1,80 @@
-# taskby-cong-ai
+# 🚀 AI-Powered NL2SQL System (Vanna 2.0 + FastAPI)
 
-# 🚀 NL2SQL System using FastAPI (Fully Open-Source)
+## 📌 Project Overview
 
-## 📌 Overview
+This project is a **Natural Language to SQL (NL2SQL) system** built using **Vanna AI 2.0** and **FastAPI**.
 
-This project implements a **Natural Language to SQL (NL2SQL)** system that allows users to interact with a database using plain English queries — without writing SQL manually.
+It allows users to ask questions in plain English and automatically:
 
-The system converts user input into SQL queries using a **local Large Language Model (LLM)** and executes them on a database to return results.
+* Generate SQL queries
+* Execute them on a database
+* Return results with summary and visualization
 
 ---
 
-## 🎯 Objective
+## 🎯 Assignment Objective
 
 * Build an end-to-end NL2SQL system
-* Convert natural language → SQL
-* Execute queries on a database
-* Return structured results via API
+* Use **Vanna 2.0 Agent architecture (NOT Vanna 0.x)**
+* Integrate an LLM (Gemini / Groq / Ollama)
+* Implement SQL validation and error handling
+* Provide API endpoints for interaction
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-```
-User (Postman )
+```text
+User Question (English)
         ↓
 FastAPI Backend
         ↓
-Local LLM (HuggingFace)
+Vanna 2.0 Agent
+(GeminiLlmService / OpenAILlmService)
         ↓
-SQL Query Generation
+SQL Validation (SELECT only)
         ↓
-SQLite Database
+SQLite Database (clinic.db)
         ↓
-Query Execution
+Execution via SqliteRunner
         ↓
-JSON Response
+Response (Data + Summary + Chart)
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component     | Technology               |
-| ------------- | ------------------------ |
-| Backend API   | FastAPI                  |
-| Database      | SQLite                   |
-| LLM           | HuggingFace Transformers |
-| Language      | Python                   |
-| ORM           | SQLAlchemy               |
-| Data Handling | Pandas                   |
+| Component     | Technology                |
+| ------------- | ------------------------- |
+| Backend       | FastAPI                   |
+| AI Agent      | Vanna AI 2.0              |
+| Database      | SQLite                    |
+| LLM Provider  | Google Gemini (Free Tier) |
+| Visualization | Plotly                    |
+| Language      | Python                    |
+
+---
+
+## 🤖 LLM Provider Used
+
+**Provider:** Google Gemini
+**Model:** `gemini-2.5-flash`
+**Reason:** Free, fast, and supported by Vanna 2.0
 
 ---
 
 
-```
 
 ---
 
-## ⚙️ Installation & Setup
 
-### 1️⃣ Clone the Repository
 
-```bash
-git clone https://github.com/your-username/nl2sql-project.git
-cd nl2sql-project
-```
-
-### 2️⃣ Create Virtual Environment (Recommended)
+### 2️⃣ Create Virtual Environment
 
 ```bash
 python -m venv venv
-source venv/bin/activate     # Linux/Mac
-venv\Scripts\activate        # Windows
+venv\Scripts\activate   
 ```
 
 ### 3️⃣ Install Dependencies
@@ -82,115 +85,171 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Running the Application
+## 🔑 Environment Variables
 
-```bash
-uvicorn main:app --reload
+Create `.env` file:
+
+```env
+GOOGLE_API_KEY=your_gemini_api_key
 ```
 
-API will be available at:
+---
+
+## 🗄️ Step 1: Create Database
+
+```bash
+python setup_database.py
+```
+
+✔ Creates:
+
+* patients
+* doctors
+* appointments
+* treatments
+* invoices
+
+✔ Inserts realistic dummy data
+
+---
+
+## 🧠 Step 2: Seed Agent Memory
+
+```bash
+python seed_memory.py
+```
+
+✔ Adds 15+ Q&A pairs
+✔ Helps model generate better SQL
+
+---
+
+## 🚀 Step 3: Run API Server
+
+```bash
+uvicorn main:app --port 8000
+```
+
+Open:
 👉 http://127.0.0.1:8000/docs
 
 ---
 
-## 🧪 API Usage
+## 📡 API Endpoints
 
-### Endpoint:
+### ✅ POST /chat
 
-```
-POST /query
-```
-
-### Example Request:
-
-```
-/query?question=Total sales by region
-```
-
-### Example Response:
+#### Request:
 
 ```json
 {
-  "question": "Total sales by region",
-  "sql": "SELECT region, SUM(sales) FROM sales_data GROUP BY region;",
-  "result": [
-    {"region": "North", "SUM(sales)": 1000},
-    {"region": "South", "SUM(sales)": 1500}
-  ]
+  "question": "Top 5 patients by total spending"
+}
+```
+
+#### Response:
+
+```json
+{
+  "message": "Here are the top 5 patients...",
+  "sql_query": "SELECT ...",
+  "columns": ["name", "spending"],
+  "rows": [["John", 5000]],
+  "row_count": 5,
+  "chart": {},
+  "chart_type": "bar"
 }
 ```
 
 ---
 
-## 🗄️ Database Schema
+### ✅ GET /health
 
-```sql
-CREATE TABLE sales_data (
-    region TEXT,
-    sales INTEGER
-);
+```json
+{
+  "status": "ok",
+  "database": "connected",
+  "agent_memory_items": 15
+}
 ```
 
 ---
 
-## 🤖 LLM Model Details
+## 🔒 SQL Validation
 
-This project uses a **local HuggingFace model** for SQL generation.
+Before execution:
 
-### Example Models:
+* Only **SELECT queries allowed**
+* Blocks:
 
-* `mistralai/Mistral-7B-Instruct`
-* `google/flan-t5-base` (lightweight option)
-
-### Prompt Strategy:
-
-* Provide schema context
-* Instruct model to return only SQL
-* Use deterministic settings (temperature = 0)
+  * INSERT, UPDATE, DELETE
+  * DROP, ALTER
+  * System tables (sqlite_master)
+  * Dangerous keywords (EXEC, GRANT)
 
 ---
 
-## 🔄 Workflow
+## ⚠️ Error Handling
 
-1. User sends a natural language query
-2. Backend sends prompt to LLM
-3. LLM generates SQL query
-4. SQL is executed using SQLAlchemy
-5. Results are returned as JSON
+* Invalid SQL → Friendly error message
+* DB failure → Exception handled
+* No data → "No data found" response
 
 ---
 
-#
+## 📊 Features Implemented
 
-## ⭐ Key Features
-
-* Fully working NL2SQL system
-* No OpenAI / No Groq (100% free)
-* FastAPI-based REST API
-* Real database execution
-* Modular and scalable design
-
----
-
-## 📦 requirements.txt
-
-```
-fastapi
-uvicorn
-transformers
-torch
-sqlalchemy
-pandas
-```
+✅ NL → SQL conversion
+✅ Vanna 2.0 Agent
+✅ SQLite execution
+✅ Agent memory learning
+✅ SQL validation
+✅ FastAPI endpoints
+✅ Error handling
+✅ Plotly chart support
 
 ---
 
+## 🧪 Testing (20 Questions)
 
+Tested with 20 queries including:
+
+* Patient count
+* Revenue
+* Joins
+* Aggregations
+* Time-based queries
+
+📄 Full results available in `RESULTS.md`
 
 ---
 
-## 💡 Conclusion
+## ⚠️ Limitations
 
-This project demonstrates how Natural Language Processing and Large Language Models can be integrated with backend systems to create intuitive data query interfaces. It eliminates the need for SQL knowledge and enables users to interact with databases seamlessly.
+* Complex joins may fail sometimes
+* Accuracy depends on LLM
+* No caching implemented
 
 ---
+
+## 🚀 Future Improvements
+
+* Add query caching
+* Improve SQL validation
+* Add authentication
+* Deploy on cloud
+* Improve visualization
+
+---
+
+## 💡 Key Learning
+
+* Learned Vanna 2.0 Agent architecture
+* Integrated LLM with backend
+* Built real-world NL2SQL pipeline
+* Handled validation and errors
+
+---
+
+
+
