@@ -1,31 +1,30 @@
+
 from fastapi import FastAPI
-from sqlalchemy import create_engine, text
-from llm import generate_sql
+from pydantic import BaseModel
+from vanna_setup import create_agent
 
 app = FastAPI()
 
-engine = create_engine("sqlite:///sales.db")
+agent, memory = create_agent()
 
-@app.get("/")
-def home():
-    return {"message": "NL2SQL API Running 🚀"}
+class Query(BaseModel):
+    question: str
 
-@app.post("/query")
-def query_db(question: str):
-    try:
-        
-        sql = generate_sql(question)
+def validate_sql(sql):
+    forbidden = ["INSERT","UPDATE","DELETE","DROP","ALTER"]
+    return not any(word in sql.upper() for word in forbidden)
 
-        
-        with engine.connect() as conn:
-            result = conn.execute(text(sql))
-            rows = [dict(row) for row in result]
+@app.post("/chat")
+def chat(q: Query):
+    response = agent.run(q.question)
 
-        return {
-            "question": question,
-            "sql": sql,
-            "result": rows
-        }
+    sql = response.get("sql", "")
 
-    except Exception as e:
-        return {"error": str(e)}
+    if not validate_sql(sql):
+        return {"error": "Invalid SQL detected"}
+
+    return response
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
